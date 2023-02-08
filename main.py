@@ -11,8 +11,11 @@ from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 import numpy as np
 
+tf.config.list_physical_devices('GPU')
+
 # Random seed
 tf.random.set_seed(1)
+np.random.seed(1)
 
 # Hyper-parameters
 batch_size = 32
@@ -21,7 +24,7 @@ learning_rate = 0.001
 n_workers = 8
 
 # Download data
-cars_test, cars_val, cars_train = tfds.load('Cars196', data_dir='C:/Users/anast/PycharmProjects/cars196/data',
+cars_test, cars_val, cars_train = tfds.load('Cars196',
                                             as_supervised=False,
                                             shuffle_files=True, split=["test", "train[0%:20%]", "train[20%:]"])
 
@@ -38,8 +41,9 @@ def crop_images(example):
     image = tf.image.crop_to_bounding_box(image, ymin, xmin, box_height, box_width)
 
     image = tf.cast(image, tf.float32)
-    image = tf.image.resize(image, (224, 224))
-    image = preprocess_input(image)
+    image = tf.image.resize_with_pad(image, 224, 224)
+    # image = preprocess_input(image)
+    image = image / 255
     label = tf.one_hot(example['label'], 196, axis=-1)
 
     return image, label
