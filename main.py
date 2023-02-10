@@ -42,14 +42,17 @@ def crop_images(example):
 
     image = tf.cast(image, tf.float32)
     image = tf.image.resize_with_pad(image, 224, 224)
-    # image = preprocess_input(image)
-    image = image / 255
-    label = tf.one_hot(example['label'], 196, axis=-1)
+    image = preprocess_input(image)
+    label = tf.one_hot(example['label'], 196)
 
     return image, label
 
-cars_train = cars_train.map(crop_images, num_parallel_calls=tf.data.AUTOTUNE).batch(batch_size)
-cars_val = cars_val.map(crop_images, num_parallel_calls=tf.data.AUTOTUNE).batch(batch_size)
+cars_train = cars_train.map(crop_images, num_parallel_calls=4)
+# cars_train = cars_train.shuffle(buffer_size=len(cars_train))
+cars_train = cars_train.batch(batch_size)
+cars_train = cars_train.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+
+cars_val = cars_val.map(crop_images).batch(batch_size)
 
 # Dictionary of the labels - maps between the label (int) number and the  vehicle model (str)
 label_dic = pd.read_csv('C:/Users/anast/Downloads/labels_dic.csv', header=None, dtype={0: str}).\
@@ -73,6 +76,47 @@ prediction_layer = tf.keras.layers.Dense(196, activation='softmax')(x)
 output = prediction_layer
 model = Model(inputs=base_model.input, outputs=output)
 model.summary()
+
+class MyModel(keras.Model):
+    def train_step(self, data):
+        print()
+        print("----Start of step: %d" % (self.step_counter,))
+        self.step_counter += 1
+
+        inputs, targets = data
+        trainable_vars = self.trainable_variables
+        with tf.GradientTape() as tape2:
+            with tf.GradientTape() as tape1:
+                preds = self(inputs, training=True)  # Forward pass
+                # Compute the loss value
+                # (the loss function is configured in `compile()`)
+                loss = self.compiled_loss(targets, preds)
+            # Compute first-order gradients
+            dl_dw = tape1.gradient(loss, trainable_vars)
+        # Compute second-order gradients
+        d2l_dw2 = tape2.gradient(dl_dw, trainable_vars)
+
+        print("Max of dl_dw[0]: %.4f" % tf.reduce_max(dl_dw[0]))
+        print("Min of dl_dw[0]: %.4f" % tf.reduce_min(dl_dw[0]))
+        print("Mean of dl_dw[0]: %.4f" % tf.reduce_mean(dl_dw[0]))
+        print("-")
+        print("Max of d2l_dw2[0]: %.4f" % tf.reduce_max(d2l_dw2[0]))
+        print("Min of d2l_dw2[0]: %.4f" % tf.reduce_min(d2l_dw2[0]))
+        print("Mean of d2l_dw2[0]: %.4f" % tf.reduce_mean(d2l_dw2[0]))
+
+        # Combine first-order and second-order gradients
+        grads = [0.5 * w1 + 0.5 * w2 for (w1, w2) in zip(d2l_dw2, dl_dw)]
+
+        # Update weights
+        self.optimizer.apply_gradients(zip(grads, trainable_vars))
+
+        # Update metrics (includes the metric that tracks the loss)
+        self.compiled_metrics.update_state(targets, preds)
+        # Return a dict mapping metric names to current value
+        return {m.name: m.result() for m in self.metrics}
+
+
+model = get_model()
 
 # Train model
 opt = Adam(lr=learning_rate)
