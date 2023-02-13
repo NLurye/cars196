@@ -49,7 +49,7 @@ cars_train = cars_train.map(crop_images, num_parallel_calls=tf.data.AUTOTUNE).ba
 cars_val = cars_val.map(crop_images, num_parallel_calls=tf.data.AUTOTUNE).batch(batch_size)
 
 # Dictionary of the labels - maps between the label (int) number and the  vehicle model (str)
-label_dic = pd.read_csv('C:/Users/anast/Downloads/labels_dic.csv', header=None, dtype={0: str}).\
+label_dic = pd.read_csv('/home/anastasia/Downloads/labels_dic.csv', header=None, dtype={0: str}).\
     set_index(0).squeeze().to_dict()
 
 # Create model
@@ -99,8 +99,8 @@ model.save('model')
 
 
 # # Analyze results
-# plt.plot(hist.history["acc"])
-# plt.plot(hist.history['val_acc'])
+# plt.plot(hist.history["accuracy"])
+# plt.plot(hist.history['val_accuracy'])
 # plt.plot(hist.history['loss'])
 # plt.plot(hist.history['val_loss'])
 # plt.title("model accuracy")
