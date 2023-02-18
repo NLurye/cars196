@@ -27,7 +27,7 @@ cars_test, cars_val, cars_train = tfds.load('Cars196', data_dir='C:/Users/anast/
 
 
 # Iterate over the dataset and crop the images using the bounding box information
-def crop_images(example):
+def preprocess_image(example):
     image = example['image']
     bbox = example['bbox']
     height, width = tf.unstack(tf.shape(image)[:2])
@@ -44,8 +44,8 @@ def crop_images(example):
 
     return image, label
 
-cars_train = cars_train.map(crop_images, num_parallel_calls=tf.data.AUTOTUNE).batch(batch_size)
-cars_val = cars_val.map(crop_images, num_parallel_calls=tf.data.AUTOTUNE).batch(batch_size)
+cars_train_pp = cars_train.map(preprocess_image, num_parallel_calls=tf.data.AUTOTUNE).batch(batch_size)
+cars_val_pp = cars_val.map(preprocess_image, num_parallel_calls=tf.data.AUTOTUNE).batch(batch_size)
 
 # Dictionary of the labels - maps between the label (int) number and the  vehicle model (str)
 label_dic = pd.read_csv('/home/anastasia/Downloads/labels_dic.csv', header=None, dtype={0: str}).\
@@ -70,12 +70,23 @@ output = prediction_layer
 model = Model(inputs=base_model.input, outputs=output)
 model.summary()
 
+# Use ImageDataGenerator to apply data augmentation
+train_datagen = ImageDataGenerator(
+    rotation_range=20,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    preprocessing_function=preprocess_input
+)
+
 # Train model
 opt = Adam(lr=learning_rate)
 loss_fn = keras.losses.CategoricalCrossentropy(from_logits=False)
 model.compile(optimizer=opt, loss=loss_fn, metrics=['accuracy'])
-hist = model.fit(cars_train, epochs=epochs, batch_size=batch_size,
-                 validation_data=cars_val, workers=n_workers)
+cars_train_pp = train_datagen.flow(cars_train_pp, batch_size=batch_size) # <-------- the part that doesn't work
+hist = model.fit(cars_train_pp, epochs=epochs, validation_data=cars_val_pp, workers=n_workers)
 model.save('model')
 
 # Analyze results
