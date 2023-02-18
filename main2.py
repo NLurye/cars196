@@ -13,7 +13,6 @@ import numpy as np
 
 # Random seed
 tf.random.set_seed(1)
-np.random.seed(1)
 
 # Hyper-parameters
 batch_size = 32
@@ -41,7 +40,7 @@ def crop_images(example):
     image = tf.cast(image, tf.float32)
     image = tf.image.resize_with_pad(image, 224, 224)
     image = preprocess_input(image)
-    label = tf.one_hot(example['label'], 196, axis=-1)
+    label = tf.one_hot(example['label'], 196)
 
     return image, label
 
@@ -61,7 +60,7 @@ for layer in base_model.layers:
 
 # Add custom prediction layer
 x = base_model.output
-x = tf.keras.layers.Flatten()(x)
+x = tf.keras.layers.GlobalMaxPooling2D()(x)  #GlobalAveragePooling2D
 x = tf.keras.layers.Dense(2048, activation='relu')(x)
 x = tf.keras.layers.Dense(2048, activation='relu')(x)
 
@@ -71,40 +70,21 @@ output = prediction_layer
 model = Model(inputs=base_model.input, outputs=output)
 model.summary()
 
-tf.config.list_physical_devices('GPU')
-
-
-print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-
 # Train model
 opt = Adam(lr=learning_rate)
 loss_fn = keras.losses.CategoricalCrossentropy(from_logits=False)
 model.compile(optimizer=opt, loss=loss_fn, metrics=['accuracy'])
-epochs = 5
-for epoch in range(epochs):
-    for i, (images, labels) in enumerate(cars_train):
-        with tf.GradientTape() as tape:
-            logits = model(images, training=True)
-            loss_value = loss_fn(labels, logits)
-            logit_ids = np.argmax(logits, axis=1)
-            label_ids = np.argmax(labels, axis=1)
-            accuracy = np.sum(logit_ids == label_ids)
-            print(accuracy)
-        grads = tape.gradient(loss_value, model.trainable_variables)
-        opt.apply_gradients(zip(grads, model.trainable_variables))
-
-        if i % 100 == 0:
-            print(f"Epoch {epoch+1}/{epochs}, Step {i}, Loss: {loss_value.numpy()}")
+hist = model.fit(cars_train, epochs=epochs, batch_size=batch_size,
+                 validation_data=cars_val, workers=n_workers)
 model.save('model')
 
-
-# # Analyze results
-# plt.plot(hist.history["accuracy"])
-# plt.plot(hist.history['val_accuracy'])
-# plt.plot(hist.history['loss'])
-# plt.plot(hist.history['val_loss'])
-# plt.title("model accuracy")
-# plt.ylabel("Accuracy")
-# plt.xlabel("Epoch")
-# plt.legend(["Accuracy", "Validation Accuracy", "loss", "Validation Loss"])
-# plt.show()
+# Analyze results
+plt.plot(hist.history["acc"])
+plt.plot(hist.history['val_acc'])
+plt.plot(hist.history['loss'])
+plt.plot(hist.history['val_loss'])
+plt.title("model accuracy")
+plt.ylabel("Accuracy")
+plt.xlabel("Epoch")
+plt.legend(["Accuracy", "Validation Accuracy", "loss", "Validation Loss"])
+plt.show()
