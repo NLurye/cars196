@@ -4,18 +4,17 @@ import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
 from keras.optimizers import Adam
 from keras import layers
-from keras.models import Model
-from keras.applications.vgg16 import VGG16
+# from keras.models import Model
+# from keras.applications.vgg16 import VGG16
 from keras.applications.vgg16 import preprocess_input
 import pandas as pd
-from keras.preprocessing.image import ImageDataGenerator
-from PIL import Image
-import numpy as np
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
-from tensorflow.keras.optimizers import Adam
-!pip install -U --no-cache-dir gdown --pre
-!gdown --id 1DS_5kLbzYYzMWtp1WP3x_hxtRBhroJID
+# from keras.preprocessing.image import ImageDataGenerator
+# from PIL import Image
+# import numpy as np
+from keras.models import Sequential
+from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+# from tensorflow.keras.optimizers import Adam
+
 
 # Random seed
 tf.random.set_seed(1)
@@ -66,7 +65,7 @@ cars_val_pp = cars_val.map(preprocess_image, num_parallel_calls=tf.data.AUTOTUNE
 
 
 # Dictionary of the labels - maps between the label (int) number and the  vehicle model (str)
-label_dic = pd.read_csv('/content/labels_dic.csv', header=None, dtype={0: str}).set_index(0).squeeze().to_dict()
+label_dic = pd.read_csv('labels_dic.csv', header=None, dtype={0: str}).set_index(0).squeeze().to_dict()
 
 
 # Define the model architecture
@@ -98,6 +97,48 @@ plt.plot(hist.history["accuracy"])
 plt.plot(hist.history['val_accuracy'])
 plt.plot(hist.history['loss'])
 plt.plot(hist.history['val_loss'])
+plt.title("model accuracy")
+plt.ylabel("Accuracy")
+plt.xlabel("Epoch")
+plt.legend(["Accuracy", "Validation Accuracy", "loss", "Validation Loss"])
+plt.show()
+
+# ---------------------------------------------------------------------------------------------------------------------
+
+model2 = Sequential()
+model2.add(Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))
+model2.add(layers.BatchNormalization())
+model2.add(Conv2D(32, (3, 3), activation='relu'))
+model2.add(layers.BatchNormalization())
+model2.add(MaxPooling2D((2, 2)))
+model2.add(Conv2D(64, (3, 3), activation='relu'))
+model2.add(layers.BatchNormalization())
+model2.add(Conv2D(64, (3, 3), activation='relu'))
+model2.add(layers.BatchNormalization())
+model2.add(MaxPooling2D((2, 2)))
+model2.add(Conv2D(128, (3, 3), activation='relu'))
+model2.add(layers.BatchNormalization())
+model2.add(Conv2D(128, (3, 3), activation='relu'))
+model2.add(layers.BatchNormalization())
+model2.add(MaxPooling2D((2, 2)))
+model2.add(Conv2D(256, (3, 3), activation='relu'))
+model2.add(layers.BatchNormalization())
+model2.add(Conv2D(256, (3, 3), activation='relu'))
+model2.add(layers.BatchNormalization())
+model2.add(MaxPooling2D((2, 2)))
+model2.add(Flatten())
+model2.add(Dense(512, activation='relu'))
+model2.add(Dropout(0.5))
+model2.add(Dense(num_classes, activation='softmax'))
+
+model2.compile(optimizer=opt, loss=loss_fn, metrics=['accuracy'])
+# Train the model
+hist2 = model.fit(cars_train_pp, epochs=epochs, validation_data=cars_val_pp, workers=n_workers)
+model2.save('model_2')
+plt.plot(hist2.history["accuracy"])
+plt.plot(hist2.history['val_accuracy'])
+plt.plot(hist2.history['loss'])
+plt.plot(hist2.history['val_loss'])
 plt.title("model accuracy")
 plt.ylabel("Accuracy")
 plt.xlabel("Epoch")
