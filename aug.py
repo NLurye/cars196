@@ -22,7 +22,7 @@ learning_rate = 0.001
 n_workers = 8
 
 # Download data
-cars_test, cars_val, cars_train = tfds.load('Cars196', data_dir='C:/Users/anast/PycharmProjects/cars196/data',
+cars_test, cars_val, cars_train = tfds.load('Cars196',
                                             as_supervised=False,
                                             shuffle_files=True, split=["test", "train[0%:20%]", "train[20%:]"])
 label_dic = pd.read_csv('labels_dic.csv', header=None, dtype={0: str}).\

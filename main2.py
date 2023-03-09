@@ -22,9 +22,7 @@ learning_rate = 0.001
 n_workers = 8
 
 # Download data
-cars_test, cars_val, cars_train = tfds.load('Cars196', data_dir='C:/Users/anast/PycharmProjects/cars196/data',
-                                            as_supervised=False,
-                                            shuffle_files=True, split=["test", "train[0%:20%]", "train[20%:]"])
+cars_test, cars_val, cars_train = tfds.load('Cars196', as_supervised=False, shuffle_files=True, split=["test", "train[0%:20%]", "train[20%:]"])
 
 from keras.utils import load_img, img_to_array
 # Iterate over the dataset and crop the images using the bounding box information

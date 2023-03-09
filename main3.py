@@ -16,21 +16,24 @@ from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
 # from tensorflow.keras.optimizers import Adam
 
 
+
+
 # Random seed
 tf.random.set_seed(1)
 
 # Hyper-parameters
 batch_size = 32
-epochs = 40
+epochs = 10
 learning_rate = 0.001
 n_workers = 4
 input_shape = (224, 224, 3)
 num_classes = 196
 
 # Download data
+
 cars_test, cars_val, cars_train = tfds.load('Cars196', as_supervised=False, shuffle_files=True, split=["test", "train[0%:20%]", "train[20%:]"])
 
-from keras.utils import load_img, img_to_array
+# from keras.utils import load_img, img_to_array
 # Iterate over the dataset and crop the images using the bounding box information
 def preprocess_image(example):
     image = example['image']
@@ -105,6 +108,15 @@ plt.show()
 
 # ---------------------------------------------------------------------------------------------------------------------
 
+batch_size = 32
+epochs = 10
+learning_rate = 0.001
+n_workers = 4
+input_shape = (224, 224, 3)
+num_classes = 196
+opt = Adam(lr=learning_rate)
+loss_fn = keras.losses.CategoricalCrossentropy(from_logits=False)
+
 model2 = Sequential()
 model2.add(Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))
 model2.add(layers.BatchNormalization())
@@ -133,7 +145,7 @@ model2.add(Dense(num_classes, activation='softmax'))
 
 model2.compile(optimizer=opt, loss=loss_fn, metrics=['accuracy'])
 # Train the model
-hist2 = model.fit(cars_train_pp, epochs=epochs, validation_data=cars_val_pp, workers=n_workers)
+hist2 = model2.fit(cars_train_pp, epochs=epochs, validation_data=cars_val_pp, workers=n_workers)
 model2.save('model_2')
 plt.plot(hist2.history["accuracy"])
 plt.plot(hist2.history['val_accuracy'])
