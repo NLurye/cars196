@@ -5,8 +5,6 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 from keras.utils import load_img
 from keras.preprocessing import image
-
-# %% [code]
 import keras
 import tensorflow_datasets as tfds
 from keras.optimizers import Adam
@@ -20,6 +18,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report
 import tensorflow_addons as tfa
 
+tf.random.set_seed(1)
 
 cars_test, cars_val, cars_train = tfds.load('Cars196', data_dir='C:/Users/anast/PycharmProjects/cars196/data', as_supervised=False, shuffle_files=True,
                                             split=["test", "train[0%:20%]", "train[20%:]"])
@@ -94,7 +93,7 @@ prediction_layer = tf.keras.layers.Dense(196, activation='softmax')(x)
 model = Model(inputs=base_model.input, outputs=prediction_layer)
 model.summary()
 
-epochs = 3
+epochs = 2
 learning_rate = 0.001
 n_workers = 8
 opt = Adam(lr=learning_rate)
@@ -105,35 +104,12 @@ model.compile(optimizer=opt, loss=loss_fn, metrics=['accuracy'])
 hist = model.fit(cars_train_pp, epochs=epochs, validation_data=cars_val_pp, workers=n_workers)
 model.save('model')
 
-plt.plot(hist.history['loss'])
-plt.plot(hist.history['val_loss'])
-plt.title('New_Model loss')
-plt.ylabel('Loss')
-plt.xlabel('Epoch')
-plt.legend(['Train', 'Validation'], loc='upper right')
-plt.show()
 
-
-plt.plot(hist.history['accuracy'])
-plt.plot(hist.history['val_accuracy'])
-plt.title('New_Model accuracy')
-plt.ylabel('Accuracy')
-plt.xlabel('Epoch')
-plt.legend(['Train', 'Validation'], loc='upper right')
-plt.show()
-
-
-y_pred = model.predict(cars_test_pp)
-
-y_true = np.concatenate([y.numpy() for x, y in cars_test_pp], axis=0)
-y_true = np.argmax(y_true, axis=1)
-
-acc = accuracy_score(y_true, np.argmax(y_pred, axis=1))
-print("Test accuracy is:", acc)
-
-num_classes = 196
-target_names = [label_dic[str(i)] for i in range(num_classes)]
-print(classification_report(y_true, np.argmax(y_pred, axis=1), target_names=target_names))
+epochs = 2
+learning_rate = 0.001
+n_workers = 8
+opt = Adam(lr=learning_rate)
+loss_fn = keras.losses.CategoricalCrossentropy(from_logits=False)
 
 base_model = VGG16(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
 
@@ -153,30 +129,4 @@ model_2.compile(optimizer=opt, loss=loss_fn, metrics=['accuracy'])
 hist = model_2.fit(cars_train_pp, epochs=epochs, validation_data=cars_val_pp, workers=n_workers)
 model_2.save('model_2')
 
-plt.plot(hist.history['loss'])
-plt.plot(hist.history['val_loss'])
-plt.title('New_Model loss')
-plt.ylabel('Loss')
-plt.xlabel('Epoch')
-plt.legend(['Train', 'Validation'], loc='upper right')
-plt.show()
-
-plt.plot(hist.history['accuracy'])
-plt.plot(hist.history['val_accuracy'])
-plt.title('New_Model accuracy')
-plt.ylabel('Accuracy')
-plt.xlabel('Epoch')
-plt.legend(['Train', 'Validation'], loc='upper right')
-plt.show()
-
-y_pred = model.predict(cars_test_pp)
-
-y_true = np.concatenate([y.numpy() for x, y in cars_test_pp], axis=0)
-y_true = np.argmax(y_true, axis=1)
-
-acc = accuracy_score(y_true, np.argmax(y_pred, axis=1))
-print("Test accuracy is:", acc)
-
-num_classes = 196
-target_names = [label_dic[str(i)] for i in range(num_classes)]
-print(classification_report(y_true, np.argmax(y_pred, axis=1), target_names=target_names))
+#random seed+hyperpara
