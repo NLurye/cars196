@@ -2,13 +2,12 @@ import keras
 import tensorflow as tf
 import tensorflow_datasets as tfds
 from keras.applications.vgg16 import preprocess_input
-from sklearn.model_selection import train_test_split
-from keras.layers import Lambda
 import tqdm
 from sklearn.pipeline import Pipeline
 from sklearn.neighbors import NeighborhoodComponentsAnalysis, KNeighborsClassifier
 import numpy as np
 
+# Load cars196 dataset
 cars = tfds.load('Cars196', as_supervised=False,
                  data_dir='/home/anastasia/Documents/EX/cars196/C:/Users/anast/PycharmProjects/cars196/data',
                  shuffle_files=True)
@@ -21,34 +20,30 @@ cars_train = cars_dataset.take(train_size)
 cars_test = cars_dataset.skip(train_size)
 
 
+# Function that crops, resizes, and formats an image
 def preprocess_image(example):
     image = example['image']
     bbox = example['bbox']
     label = example['label']
 
-    # Crop
     h, w = tf.unstack(tf.shape(image)[:2])
     scaled_box = bbox * [h, w, h, w]
-    ymin, xmin, ymax, xmax = tf.unstack(tf.cast(scaled_box, tf.int32))
-    box_width = xmax - xmin
-    box_height = ymax - ymin
-    image = tf.image.crop_to_bounding_box(image, ymin, xmin, box_height, box_width)
-
-    # cast
+    y_min, x_min, y_max, x_max = tf.unstack(tf.cast(scaled_box, tf.int32))
+    box_width = x_max - x_min
+    box_height = y_max - y_min
+    image = tf.image.crop_to_bounding_box(image, y_min, x_min, box_height, box_width)
     image = tf.cast(image, tf.float32)
-
-    # resize
     image = tf.image.resize_with_pad(image, 224, 224)
-
     return image, label
 
 
-cars_train_pp = cars_train.map(preprocess_image, num_parallel_calls=tf.data.AUTOTUNE).batch(1).prefetch(
+# Reformat the images in train and test
+cars_train_pp = cars_train.map(preprocess_image, num_parallel_calls=tf.data.AUTOTUNE).batch(16).prefetch(
     buffer_size=tf.data.AUTOTUNE)
-cars_test_pp = cars_test.map(preprocess_image, num_parallel_calls=tf.data.AUTOTUNE).batch(1).prefetch(
+cars_test_pp = cars_test.map(preprocess_image, num_parallel_calls=tf.data.AUTOTUNE).batch(16).prefetch(
     buffer_size=tf.data.AUTOTUNE)
 
-# KNN
+# Load a pre-trained model to use as a feature extractor
 model_path = '/home/anastasia/Documents/EX/cars196/best_model_tl.h5'
 pretrained_model = keras.models.load_model(model_path, custom_objects={"preprocess_input": preprocess_input})
 pretrained_model.summary()
@@ -58,26 +53,29 @@ feature_extractor = keras.Model(
 )
 
 
-def get_feature_vectors(data_set):
+# Function that gets a feature vector representation per image
+def get_feature_vectors(data_set, feature_length):
     x = []
     y = []
+    x = np.empty((0, feature_length))
+    y = np.empty(0)
     for img, label in tqdm.tqdm(data_set):
         feature_vector = feature_extractor(img)
-        x.append(tf.squeeze(feature_vector))
-        y.append(tf.squeeze(label))
-
-    x = np.array(x)
-    y = np.array(y)
+        x = np.vstack((x, np.array(feature_vector)))
+        y = np.hstack((y, np.array(label)))
     return x, y
 
 
-X_train, y_train = get_feature_vectors(cars_train_pp.take(100))
-X_test, y_test = get_feature_vectors(cars_test_pp.take(100))
-# Convert list to numm
+# Get feature representation for each image in train and test
+X_train, y_train = get_feature_vectors(cars_train_pp, feature_length=2048)
+X_test, y_test = get_feature_vectors(cars_test_pp, feature_length=2048)
 
+# Create and fit KNN model
 nca = NeighborhoodComponentsAnalysis(random_state=42)
 knn = KNeighborsClassifier(n_neighbors=3)
 nca_pipe = Pipeline([('nca', nca), ('knn', knn)])
 nca_pipe.fit(X_train, y_train)
 
-print(nca_pipe.score(X_test, y_test))
+# Predict on test set
+accuracy = nca_pipe.score(X_test, y_test)
+print(f'Accuracy: {accuracy}')
