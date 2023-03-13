@@ -1,11 +1,11 @@
 import keras
 import tensorflow as tf
 import tensorflow_datasets as tfds
-from keras.applications.vgg16 import preprocess_input
 import tqdm
+import numpy as np
+from keras.applications.vgg16 import preprocess_input
 from sklearn.pipeline import Pipeline
 from sklearn.neighbors import NeighborhoodComponentsAnalysis, KNeighborsClassifier
-import numpy as np
 
 # Load cars196 dataset
 cars = tfds.load('Cars196', as_supervised=False,
@@ -55,8 +55,6 @@ feature_extractor = keras.Model(
 
 # Function that gets a feature vector representation per image
 def get_feature_vectors(data_set, feature_length):
-    x = []
-    y = []
     x = np.empty((0, feature_length))
     y = np.empty(0)
     for img, label in tqdm.tqdm(data_set):
