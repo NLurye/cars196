@@ -38,12 +38,14 @@ def preprocess_image(example):
 
 
 # Reformat the images in train and test
-cars_train_pp = cars_train.map(preprocess_image, num_parallel_calls=tf.data.AUTOTUNE).batch(16).prefetch(
+print('Processing datasets')
+cars_train_pp = cars_train.map(preprocess_image, num_parallel_calls=tf.data.AUTOTUNE).batch(32).prefetch(
     buffer_size=tf.data.AUTOTUNE)
-cars_test_pp = cars_test.map(preprocess_image, num_parallel_calls=tf.data.AUTOTUNE).batch(16).prefetch(
+cars_test_pp = cars_test.map(preprocess_image, num_parallel_calls=tf.data.AUTOTUNE).batch(32).prefetch(
     buffer_size=tf.data.AUTOTUNE)
 
 # Load a pre-trained model to use as a feature extractor
+print('Loading pre-trained model')
 model_path = '/home/anastasia/Documents/EX/cars196/best_model_tl.h5'
 pretrained_model = keras.models.load_model(model_path, custom_objects={"preprocess_input": preprocess_input})
 pretrained_model.summary()
@@ -53,26 +55,30 @@ feature_extractor = keras.Model(
 )
 
 
-# Function that gets a feature vector representation per image
+# Function that gets a feature vector representation per image in a dataset
 def get_feature_vectors(data_set, feature_length):
-    x = np.empty((0, feature_length))
+    x = np.empty((0, int(feature_length / 2)))
     y = np.empty(0)
     for img, label in tqdm.tqdm(data_set):
         feature_vector = feature_extractor(img)
+        feature_vector = feature_vector[:, ::2]  # reduce size (optional)
         x = np.vstack((x, np.array(feature_vector)))
         y = np.hstack((y, np.array(label)))
     return x, y
 
 
 # Get feature representation for each image in train and test
+print('Extracting feature vectors')
 X_train, y_train = get_feature_vectors(cars_train_pp, feature_length=2048)
 X_test, y_test = get_feature_vectors(cars_test_pp, feature_length=2048)
 
 # Create and fit KNN model
+print('Fitting KNN model')
 nca = NeighborhoodComponentsAnalysis(random_state=42)
-knn = KNeighborsClassifier(n_neighbors=3)
+knn = KNeighborsClassifier(n_neighbors=5)
 nca_pipe = Pipeline([('nca', nca), ('knn', knn)])
 nca_pipe.fit(X_train, y_train)
+print('Model complete')
 
 # Predict on test set
 accuracy = nca_pipe.score(X_test, y_test)
